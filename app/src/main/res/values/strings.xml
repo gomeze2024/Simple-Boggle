@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">EmmaleeGomez-SimpleBoggle</string>
+    <string name="prompt">Enter a word, then hit submit.</string>
+    <string name="clear">CLEAR</string>
+    <string name="submit">SUBMIT</string>
+    <string name="placeholder">A</string>
+    <string name="new_game">New Game</string>
+    <string name="score">SCORE: %d</string>
+    <string name="arrow">arrow</string>
+</resources>
