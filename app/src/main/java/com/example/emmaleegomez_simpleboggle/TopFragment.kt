@@ -1,5 +1,6 @@
 package com.example.emmaleegomez_simpleboggle
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +15,8 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.net.URL
 
 class TopFragment : Fragment(), ButtonRecyclerViewAdapter.ItemClickListener {
@@ -22,7 +25,7 @@ class TopFragment : Fragment(), ButtonRecyclerViewAdapter.ItemClickListener {
     private lateinit var wordState : TextView
     private lateinit var clearButton : Button
     private lateinit var submitButton : Button
-    private lateinit var wordBank : List<String>
+    private var wordBank : MutableList<String> = mutableListOf()
 
     private val vowels : List<Char> = listOf('A', 'E', 'I', 'O', 'U')
     private val doubleValue : List<Char> = listOf('S', 'Z', 'P', 'X', 'Q')
@@ -48,10 +51,8 @@ class TopFragment : Fragment(), ButtonRecyclerViewAdapter.ItemClickListener {
         clearButton = view.findViewById(R.id.clear)
         submitButton = view.findViewById(R.id.submit)
 
-        lifecycleScope.launch {
-            wordBank = fetchWordBank()
-            wordBank = wordBank.map { it.uppercase() }
-        }
+        fetchWordBank()
+        wordBank = wordBank.map { it.uppercase() }.toMutableList()
 
         val recyclerView: RecyclerView = view.findViewById(R.id.recyclerView)
         val numberOfColumns = 4
@@ -66,31 +67,36 @@ class TopFragment : Fragment(), ButtonRecyclerViewAdapter.ItemClickListener {
         }
 
         submitButton.setOnClickListener {
-            val word = wordState.text.toString()
-            val vowelCount = word.count { it in vowels}
-            val context = submitButton.context
-            var score = 0
+            if (wordBank.isNotEmpty()) {
+                val word = wordState.text.toString()
+                val vowelCount = word.count { it in vowels }
+                val context = submitButton.context
+                var score = 0
 
-            if (word.length < 4 || vowelCount < 2
-                || wordSet.contains(word)
-                || !wordBank.contains(word)) {
-                score -= 10
-                Toast.makeText(context, "That's incorrect, $score", Toast.LENGTH_SHORT).show()
+                if (word.length < 4 || vowelCount < 2
+                    || wordSet.contains(word)
+                    || !wordBank.contains(word)
+                ) {
+                    score -= 10
+                    Toast.makeText(context, "That's incorrect, $score", Toast.LENGTH_SHORT).show()
+                } else {
+                    val doubleScore = word.any { it in doubleValue }
+                    for (char in word) {
+                        score += if (char in vowels) 5 else 1
+                    }
+                    if (doubleScore) {
+                        score *= 2
+                    }
+
+                    Toast.makeText(context, "That's correct, +$score", Toast.LENGTH_SHORT).show()
+                }
+                wordSet.add(word)
+                adapter.enableAllButtons()
+                wordState.text = ""
+                viewModel.changeScore(score)
             } else {
-                val doubleScore = word.any { it in doubleValue }
-                for (char in word) {
-                    score += if (char in vowels) 5 else 1
-                }
-                if (doubleScore) {
-                    score *= 2
-                }
-
-                Toast.makeText(context, "That's correct, +$score", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Word bank has not loaded", Toast.LENGTH_SHORT).show()
             }
-            wordSet.add(word)
-            adapter.enableAllButtons()
-            wordState.text = ""
-            viewModel.changeScore(score)
         }
 
         return view
@@ -103,10 +109,25 @@ class TopFragment : Fragment(), ButtonRecyclerViewAdapter.ItemClickListener {
         return (randomVowels + randomLetters).shuffled()
     }
 
-    private suspend fun fetchWordBank(): List<String> {
-        return withContext(Dispatchers.IO) {
-            URL("https://raw.githubusercontent.com/dwyl/english-words/master/words.txt").openStream()
-                .bufferedReader().readLines()
+    private fun fetchWordBank() {
+        val fileName = "words.txt"
+        var reader: BufferedReader? = null
+        try {
+            val assetManager = context?.assets
+            val inputStream = assetManager?.open(fileName)
+            reader = BufferedReader(InputStreamReader(inputStream))
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                wordBank.add(line.toString())
+            }
+        } catch (e: Exception) {
+            println("Error1")
+        } finally {
+            try {
+                reader?.close()
+            } catch (_: Exception) {
+            }
+            println("Error2")
         }
     }
 
@@ -114,7 +135,6 @@ class TopFragment : Fragment(), ButtonRecyclerViewAdapter.ItemClickListener {
         adapter.enableAllButtons()
         adapter.updateData(generateBoard())
         wordState.text = ""
-        wordSet.clear()
     }
 
     override fun onItemClick(view: View?, position: Int) {
