@@ -6,3 +6,6 @@ An Android Boggle Game developed in Kotlin, showcasing development concepts like
 - All words must utilize a minimum of two vowels. 
 - You cannot generate the same word more than once, even if it’s from different letters. 
 - Words must be at least 4 chars long. 
+<p float="left">
+  <img src="https://github.com/gomeze2024/Simple-Boggle/blob/main/simple-boggle.png?raw=true" width="300" />
+</p>
